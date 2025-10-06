@@ -1,0 +1,8 @@
+
+nest.trait.user.UserInfoTrait)
+'nest.trait.structure.StructureInfoTrait$
+"weave.trait.security.BoltLockTrait,
+*weave.trait.security.BoltLockSettingsTrait0
+.weave.trait.security.BoltLockCapabilitiesTrait(
+&weave.trait.security.PincodeInputTrait"
+ weave.trait.security.TamperTrait
