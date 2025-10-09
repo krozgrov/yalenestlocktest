@@ -1,0 +1,20 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+
+package nestlabs.gateway.v2;
+
+// This is the main message structure for ObserveTraits requests
+message ObserveRequest {
+  int32 version = 1;                    // API version (e.g., 2)
+  bool subscribe = 2;                   // Whether to subscribe for updates
+  repeated ResourceFilter filter = 3;   // List of trait filters
+}
+
+message ResourceFilter {
+  string trait_type = 1;                // Full trait type name (e.g., "weave.trait.security.BoltLockTrait")
+  string resource_id = 2;               // Optional: specific device/resource ID
+}
+
+service GatewayService {
+  rpc Observe(ObserveRequest) returns (stream StreamBody);
+}

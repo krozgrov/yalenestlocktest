@@ -2,9 +2,9 @@ syntax = "proto3";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "./detector.proto";
-import "./occupancy.proto";
-import "../../weave/common.proto";
+import "nest/trait/detector.proto";
+import "nest/trait/occupancy.proto";
+import "weave/common.proto";
 
 package nest.trait.security;
 

@@ -1,11 +1,13 @@
+import base64
+import json
+import uuid
 from dotenv import load_dotenv
 import os
 import asyncio
-import json
-import uuid
 import requests
-from proto.nestlabs.gateway import v1_pb2
 from google.protobuf import any_pb2
+from proto.nestlabs.gateway import v1_pb2
+from proto.nestlabs.gateway import v2_pb2
 from proto.weave.trait import security_pb2 as weave_security_pb2
 from protobuf_manager import _read_protobuf as read_protobuf
 from protobuf_handler import NestProtobufHandler
@@ -20,7 +22,7 @@ from const import (
 
 load_dotenv()
 
-REQUEST_URL = os.environ.get("REQUEST_URL")
+ISSUE_TOKEN = os.environ.get("ISSUE_TOKEN")
 COOKIES = os.environ.get("COOKIES")
 
 # Google Access Token
@@ -32,7 +34,7 @@ headers = {
   'User-Agent': USER_AGENT_STRING,
   'timeout': f"{API_TIMEOUT_SECONDS}",
 }
-response = requests.request("GET", REQUEST_URL, headers=headers)
+response = requests.request("GET", ISSUE_TOKEN, headers=headers)
 response_header_cookies = response.headers.get("Set-Cookie")
 google_access_token = response.json().get("access_token")
 session = requests.Session()
@@ -72,21 +74,38 @@ transport_url = session_data.get("urls").get("transport_url")
 # Get Lock data from Observe Endpoint
 payload_observe = read_protobuf("proto/ObserveTraits.bin")
 headers_observe = {
+  'Accept-Encoding': 'gzip, deflate, br, zstd',
   'Content-Type': 'application/x-protobuf',
   'User-Agent': USER_AGENT_STRING,
   'X-Accept-Response-Streaming': 'true',
   'Accept': 'application/x-protobuf',
-  'x-nl-webapp-version': 'NlAppSDKVersion/8.15.0 NlSchemaVersion/2.1.20-87-gce5742894',
+  # 'x-nl-webapp-version': 'NlAppSDKVersion/8.15.0 NlSchemaVersion/2.1.20-87-gce5742894',
   'referer': 'https://home.nest.com/',
   'origin': 'https://home.nest.com',
   'X-Accept-Content-Transfer-Encoding': 'binary',
   'Authorization': 'Basic ' + access_token
 }
 
-handler = NestProtobufHandler()
+# Build Observe Request Payload
+req = v2_pb2.ObserveRequest(version=2, subscribe=True)
+trait_names = [
+  "nest.trait.user.UserInfoTrait",
+  "nest.trait.structure.StructureInfoTrait",
+  "weave.trait.security.BoltLockTrait",
+  "weave.trait.security.BoltLockSettingsTrait",
+  "weave.trait.security.BoltLockCapabilitiesTrait",
+  "weave.trait.security.PincodeInputTrait",
+  "weave.trait.security.TamperTrait"
+]
+for trait_name in trait_names:
+    filt = req.filter.add()
+    filt.trait_type = trait_name
+payload_observe = req.SerializeToString()
 
 locks_data = {}
 observe_response = session.post(f'{URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME['grpc_hostname'])}{ENDPOINT_OBSERVE}', headers=headers_observe, data=payload_observe, stream=True)
+
+handler = NestProtobufHandler()
 for chunk in observe_response.iter_content(chunk_size=None):
   if chunk:
     async def process_chunk(locks_data):
@@ -100,6 +119,7 @@ for chunk in observe_response.iter_content(chunk_size=None):
     break
 
 print ("######### OBSERVE DATA #########")
+print()
 print(json.dumps(locks_data, indent=2))
 print ("################################\n")
 
@@ -161,6 +181,7 @@ request.resourceRequest.requestId = request_id
 encoded_data = request.SerializeToString()
 
 print(f"###### COMMAND FOR {device_id} ######")
+print(base64.b64encode(command["command"]["value"]))
 print(request)
 print("###################################\n")
 try:
