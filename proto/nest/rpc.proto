@@ -19,7 +19,7 @@ message TraitGetProperty {
   ObjectIdPair object = 1;
   bytes something = 2;
   DynamicProp_Indirect data = 3;
-  int64 timestamp = 4;
+  int64 something_else = 4;
 }
 
 message PropertyKeyTraitPair {
