@@ -2,8 +2,6 @@
 
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
-
 package nest.trait.structure;
 
 // Messages

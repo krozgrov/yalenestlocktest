@@ -23,8 +23,8 @@ def GetSessionWithAuth():
     'timeout': f"{API_TIMEOUT_SECONDS}",
   }
   response = requests.request("GET", ISSUE_TOKEN, headers=headers)
-  response_header_cookies = response.headers.get("Set-Cookie")
   google_access_token = response.json().get("access_token")
+  print(response.status_code, google_access_token, response.text)
   session = requests.Session()
 
   # Exchange Google Access Token for Nest JWT
@@ -41,6 +41,7 @@ def GetSessionWithAuth():
     "google_oauth_access_token": google_access_token,
     "policy_id": "authproxy-oauth-policy"
   })
+  print(nest_response.status_code)
   nest_data = nest_response.json()
   access_token = nest_data.get("jwt")
 
@@ -53,7 +54,9 @@ def GetSessionWithAuth():
     'timeout': f"{API_TIMEOUT_SECONDS}"
   }
   session_response = session.request("GET", session_url, headers=session_headers)
+  print(session_response.status_code)
   session_data = session_response.json()
+  print(session_data)
   access_token = session_data.get("access_token")
   user_id = session_data.get("userid")
   transport_url = session_data.get("urls").get("transport_url") 

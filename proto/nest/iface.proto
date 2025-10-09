@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package nest.iface;
+
+message Interface {
+  string type = 2;
+  InterfaceMapping mapping = 4;
+}
+
+message InterfaceMapping {
+  int32 key = 1;
+  int32 value = 2;
+}

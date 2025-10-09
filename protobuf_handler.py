@@ -6,7 +6,7 @@ from google.protobuf.any_pb2 import Any
 from proto.weave.trait import security_pb2 as weave_security_pb2
 from proto.nest.trait import user_pb2 as nest_user_pb2
 from proto.nest.trait import structure_pb2 as nest_structure_pb2
-from proto import root_pb2
+from proto.nest import rpc_pb2 as rpc
 from protobuf_manager import read_protobuf_file
 from const import (
     USER_AGENT_STRING,
@@ -29,7 +29,7 @@ class NestProtobufHandler:
     def __init__(self):
         self.buffer = bytearray()
         self.pending_length = None
-        self.stream_body = root_pb2.StreamBody()
+        self.stream_body = rpc.StreamBody()
 
     def _decode_varint(self, buffer, pos):
         value = 0

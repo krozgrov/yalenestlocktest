@@ -1,24 +1,7 @@
-// Protobuf schema for Nest Observe and Nest BatchUpdateState API calls
-
 syntax = "proto3";
 
-import "nest/trait/hvac.proto";
-import "nest/trait/sensor.proto";
-import "nest/trait/structure.proto";
-import "weave/trait/peerdevices.proto";
-import "nest/trait/located.proto";
-import "weave/trait/description.proto";
-import "nest/trait/user.proto";
-import "weave/trait/heartbeat.proto";
-import "weave/common.proto";
-import "weave/trait/security.proto";
-import "weave/trait/power.proto";
-import "nest/trait/security.proto";
-import "nest/trait/detector.proto";
-import "nest/messages.proto";
-import "nestlabs/gateway/v1.proto";
-
 import "google/protobuf/any.proto";
+import "proto/nest/iface.proto";
 
 package nest.rpc;
 
@@ -34,17 +17,37 @@ message DynamicProp_Indirect {
 
 message TraitGetProperty {
   ObjectIdPair object = 1;
+  bytes something = 2;
   DynamicProp_Indirect data = 3;
+  int64 timestamp = 4;
+}
+
+message PropertyKeyTraitPair {
+  string property_key = 1;
+  string trait_type = 2;
 }
 
 message TraitSetProperty {
-  ObjectIdPair object = 1;
-  google.protobuf.Any property = 2;
+  string resource_id = 1;
+  string resource_type = 2;
+  PropertyKeyTraitPair property_key = 4;
+  nest.iface.Interface interface = 7;
+}
+
+// message TraitSetProperty {
+//   ObjectIdPair object = 1;
+//   google.protobuf.Any property = 2;
+// }
+
+message SomeList {
+  string first = 1;
+  string second = 2;
 }
 
 message NestMessage {
   repeated TraitSetProperty set = 1;
   repeated TraitGetProperty get = 3;
+  SomeList some_list = 5;
 }
 
 message Status {

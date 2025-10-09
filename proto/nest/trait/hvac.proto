@@ -2,8 +2,7 @@
 
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
-import "weave/common.proto";
+import "proto/weave/common.proto";
 
 package nest.trait.hvac;
 
@@ -205,14 +204,14 @@ message RemoteComfortSensingSettingsTrait {
 // Enums
 
 enum HeatCoolMode {
-  INVALID_0 = 0;
+  INVALID_HEAT_COOL_MODE = 0;
   HEAT = 1;
   COOL = 2;
   RANGE = 3;
 }
 
 enum EcoModeState {
-  INVALID_0 = 0;
+  INVALID_ECO_MODE_STATE = 0;
   OFF = 1;
   ON = 2;
 }
@@ -227,7 +226,7 @@ enum EcoModeChangeReason {
 }
 
 enum UpdateSource {
-  INVALID_0 = 0;
+  INVALID_UPDATE_SOURCE = 0;
   INVALID_1 = 1;
   INVALID_2 = 2;
   DEVICE = 3;
