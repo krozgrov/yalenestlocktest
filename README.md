@@ -9,6 +9,8 @@ There are 2 separate requirements.txt files. This is because the `blackboxprotob
 `pip install -r requirements.txt`
 `pip install -r requirements-no-deps.txt --no-deps`
 
+If you accidentally install `blackboxprotobuf` with dependencies and the runtime gets downgraded (you will see `ImportError: cannot import name 'runtime_version'`), simply reinstall the required `protobuf` wheel explicitly: `pip install --upgrade protobuf==6.32.1`.
+
 ## Environment File
 
 There is a template for `.env` file called `.env_template`. Simply rename or copy the `.env_template` as `.env` and fill out the 2 variables. For information on how to get the values for the ENV file, read the instructions found [here](https://github.com/chrisjshull/homebridge-nest/tree/master?tab=readme-ov-file#using-a-google-account)
