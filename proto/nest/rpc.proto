@@ -39,15 +39,15 @@ message TraitSetProperty {
 //   google.protobuf.Any property = 2;
 // }
 
-message SomeList {
-  string first = 1;
-  string second = 2;
+message CatalogMetadata {
+  uint64 catalog_version = 1;
+  uint64 snapshot_time_usec = 2;
 }
 
 message NestMessage {
   repeated TraitSetProperty set = 1;
   repeated TraitGetProperty get = 3;
-  SomeList some_list = 5;
+  CatalogMetadata catalog_metadata = 5;
 }
 
 message Status {

@@ -1,3 +1,4 @@
+import argparse
 import base64
 import json
 import uuid
@@ -9,7 +10,6 @@ from google.protobuf import any_pb2
 from proto.nestlabs.gateway import v1_pb2
 from proto.nestlabs.gateway import v2_pb2
 from proto.weave.trait import security_pb2 as weave_security_pb2
-from protobuf_manager import _read_protobuf as read_protobuf
 from protobuf_handler import NestProtobufHandler
 from const import (
   API_TIMEOUT_SECONDS,
@@ -19,11 +19,50 @@ from const import (
   URL_PROTOBUF,
   PRODUCTION_HOSTNAME
 )
+import requests
+
+def parse_args():
+  parser = argparse.ArgumentParser(description="Inspect Yale lock state and optionally send a lock/unlock command.")
+  parser.add_argument(
+    "--action",
+    choices=["status", "lock", "unlock"],
+    default="status",
+    help="Post-observe action. 'status' only prints state; 'lock' or 'unlock' sends a command."
+  )
+  parser.add_argument(
+    "--device-id",
+    help="Lock device id to control. Defaults to the first discovered Yale lock."
+  )
+  parser.add_argument(
+    "--dry-run",
+    action="store_true",
+    help="Build and display the command without sending it to Nest."
+  )
+  return parser.parse_args()
+
+args = parse_args()
 
 load_dotenv()
 
 ISSUE_TOKEN = os.environ.get("ISSUE_TOKEN")
 COOKIES = os.environ.get("COOKIES")
+
+
+def _normalize_base(url: str | None) -> str | None:
+  if not url:
+    return None
+  return url.rstrip("/")
+
+
+def _transport_candidates(session_base: str | None) -> list[str]:
+  candidates = []
+  normalized_session = _normalize_base(session_base)
+  if normalized_session:
+    candidates.append(normalized_session)
+  default = _normalize_base(URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME["grpc_hostname"]))
+  if default and default not in candidates:
+    candidates.append(default)
+  return candidates
 
 # Google Access Token
 headers = {
@@ -72,7 +111,6 @@ transport_url = session_data.get("urls").get("transport_url")
 
 
 # Get Lock data from Observe Endpoint
-payload_observe = read_protobuf("proto/ObserveTraits.bin")
 headers_observe = {
   'Accept-Encoding': 'gzip, deflate, br, zstd',
   'Content-Type': 'application/x-protobuf',
@@ -103,7 +141,26 @@ for trait_name in trait_names:
 payload_observe = req.SerializeToString()
 
 locks_data = {}
-observe_response = session.post(f'{URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME['grpc_hostname'])}{ENDPOINT_OBSERVE}', headers=headers_observe, data=payload_observe, stream=True)
+observe_base = None
+observe_response = None
+for base_url in _transport_candidates(transport_url):
+  target_url = f"{base_url}{ENDPOINT_OBSERVE}"
+  try:
+    print(f"[main] Sending Observe request to {target_url}")
+    response = session.post(target_url, headers=headers_observe, data=payload_observe, stream=True, timeout=(API_TIMEOUT_SECONDS, API_TIMEOUT_SECONDS))
+    response.raise_for_status()
+    observe_response = response
+    observe_base = base_url
+    break
+  except requests.HTTPError as err:
+    status = err.response.status_code if err.response else "unknown"
+    print(f"[main] Observe failed for {target_url} (status {status}): {err}")
+  except Exception as err:
+    print(f"[main] Observe error for {target_url}: {err}")
+
+if observe_response is None:
+  session.close()
+  raise SystemExit("Failed to open Observe stream against all transport endpoints.")
 
 handler = NestProtobufHandler()
 for chunk in observe_response.iter_content(chunk_size=None):
@@ -123,16 +180,42 @@ print()
 print(json.dumps(locks_data, indent=2))
 print ("################################\n")
 
+if args.action == "status":
+  session.close()
+  raise SystemExit(0)
+
 user_id = locks_data.get("user_id", None)
 structure_id = locks_data.get("structure_id", None)
-for lock_id, lock_info in locks_data.get("yale", {}).items():
-  if lock_info.get("device_id"):
-    device_id = lock_info["device_id"]
-    break
+locks = locks_data.get("yale", {})
+
+device_id = None
+if args.device_id:
+  lock_info = locks.get(args.device_id)
+  if not lock_info:
+    available = ", ".join(locks.keys()) or "none"
+    session.close()
+    raise SystemExit(f"Requested device_id '{args.device_id}' not found. Available locks: {available}")
+  device_id = lock_info.get("device_id") or args.device_id
+else:
+  for lock_id, lock_info in locks.items():
+    if lock_info.get("device_id"):
+      device_id = lock_info["device_id"]
+      break
+
+if not device_id:
+  session.close()
+  raise SystemExit("No Yale lock device_id discovered; nothing to control.")
 
 
 # Send an unlock command to a lock
-state = weave_security_pb2.BoltLockTrait.BOLT_STATE_RETRACTED
+if args.action == "unlock":
+  state = weave_security_pb2.BoltLockTrait.BOLT_STATE_RETRACTED
+elif args.action == "lock":
+  state = weave_security_pb2.BoltLockTrait.BOLT_STATE_EXTENDED
+else:
+  session.close()
+  raise SystemExit(f"Unsupported action {args.action!r}.")
+
 request = weave_security_pb2.BoltLockTrait.BoltLockChangeRequest()
 request.state = state
 request.boltLockActor.method = weave_security_pb2.BoltLockTrait.BOLT_LOCK_ACTOR_METHOD_REMOTE_USER_EXPLICIT
@@ -158,14 +241,6 @@ headers = {
   "request-id": request_id,
 }
 
-# Always include a structure_id header, defaulting to the fetched one
-# effective_structure_id = structure_id
-# if effective_structure_id:
-#     headers["X-Nest-Structure-Id"] = effective_structure_id
-#     print(f"[nest_yale] Using structure_id: {effective_structure_id}")
-
-api_url = f"{URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME['grpc_hostname'])}{ENDPOINT_SENDCOMMAND}"
-
 cmd_any = any_pb2.Any()
 cmd_any.type_url = command["command"]["type_url"]
 cmd_any.value = command["command"]["value"] if isinstance(command["command"]["value"], bytes) else command["command"]["value"].SerializeToString()
@@ -180,16 +255,51 @@ request.resourceRequest.resourceId = device_id
 request.resourceRequest.requestId = request_id
 encoded_data = request.SerializeToString()
 
-print(f"###### COMMAND FOR {device_id} ######")
+print(f"###### COMMAND FOR {device_id} ({args.action}) ######")
 print(base64.b64encode(command["command"]["value"]))
 print(request)
 print("###################################\n")
+if args.dry_run:
+  print("Dry-run enabled; skipping command dispatch.")
+  session.close()
+  raise SystemExit(0)
+
+if structure_id:
+  headers["X-Nest-Structure-Id"] = structure_id
+
+command_base_candidates = []
+if observe_base:
+  command_base_candidates.append(observe_base)
+command_base_candidates.extend(
+  base for base in _transport_candidates(transport_url)
+  if base not in command_base_candidates
+)
+
 try:
-  response = v1_pb2.ResourceCommandResponseFromAPI()
-  command_response = session.post(api_url, headers=headers, data=encoded_data)
-  response.ParseFromString(command_response.content)
+  response_message = None
+  last_error = None
+  for base_url in command_base_candidates:
+    api_url = f"{base_url}{ENDPOINT_SENDCOMMAND}"
+    try:
+      print(f"[main] Posting command to {api_url}")
+      command_response = session.post(api_url, headers=headers, data=encoded_data, timeout=API_TIMEOUT_SECONDS)
+      print(f"[main] Command response status: {command_response.status_code}")
+      if command_response.status_code != 200:
+        print(f"[main] Response body: {command_response.text}")
+        command_response.raise_for_status()
+      response_message = v1_pb2.ResourceCommandResponseFromAPI()
+      response_message.ParseFromString(command_response.content)
+      break
+    except Exception as err:
+      last_error = err
+      print(f"[main] Command attempt failed for {api_url}: {err}")
+  if response_message is None:
+    raise last_error or RuntimeError("Command failed for all transport endpoints.")
+
   print("######### COMMAND RESPONSE #########")
-  print(response)
+  print(response_message)
   print("###################################")
 except Exception as e:
   print(f"Command failed for {device_id}: {e}")
+finally:
+  session.close()

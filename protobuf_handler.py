@@ -25,6 +25,18 @@ STREAM_TIMEOUT_SECONDS = 600  # 10min
 PING_INTERVAL_SECONDS = 60
 CATALOG_THRESHOLD = 20000  # 20KB
 
+def _normalize_any_type(any_message: Any) -> Any:
+    """Map non-standard type URLs (e.g. type.nestlabs.com) to the canonical googleapis prefix."""
+    if not isinstance(any_message, Any):
+        return any_message
+    type_url = any_message.type_url or ""
+    if type_url.startswith("type.nestlabs.com/"):
+        normalized = Any()
+        normalized.value = any_message.value
+        normalized.type_url = type_url.replace("type.nestlabs.com/", "type.googleapis.com/", 1)
+        return normalized
+    return any_message
+
 class NestProtobufHandler:
     def __init__(self):
         self.buffer = bytearray()
@@ -69,7 +81,9 @@ class NestProtobufHandler:
                     obj_id = get_op.object.id if get_op.object.id else None
                     obj_key = get_op.object.key if get_op.object.key else "unknown"
 
-                    type_url = getattr(get_op.data.property, "type_url", None)
+                    property_any = getattr(get_op.data, "property", None)
+                    property_any = _normalize_any_type(property_any) if property_any else None
+                    type_url = getattr(property_any, "type_url", None) if property_any else None
                     if not type_url and 7 in get_op:
                         type_url = "weave.trait.security.BoltLockTrait"
 
@@ -78,7 +92,10 @@ class NestProtobufHandler:
                     if "BoltLockTrait" in type_url and obj_id:
                         bolt_lock = weave_security_pb2.BoltLockTrait()
                         try:
-                            unpacked = get_op.data.property.Unpack(bolt_lock)
+                            if not property_any:
+                                _LOGGER.warning(f"No property payload for {obj_id}, skipping BoltLockTrait decode")
+                                continue
+                            unpacked = property_any.Unpack(bolt_lock)
                             if not unpacked:
                                 _LOGGER.warning(f"Unpacking failed for {obj_id}, skipping")
                                 continue
@@ -103,11 +120,11 @@ class NestProtobufHandler:
                     elif "StructureInfoTrait" in type_url and obj_id:
                         try:
                             # Log raw structure_info for debugging
-                            _LOGGER.debug(f"Raw structure_info data for {obj_id}: {get_op.data.property}")
+                            _LOGGER.debug(f"Raw structure_info data for {obj_id}: {property_any}")
                             # Extract legacyId or use obj_id as fallback
-                            if hasattr(get_op.data.property, "value"):
+                            if property_any:
                                 structure = nest_structure_pb2.StructureInfoTrait()
-                                unpacked = get_op.data.property.Unpack(structure)
+                                unpacked = property_any.Unpack(structure)
                                 if not unpacked:
                                     _LOGGER.warning(f"Unpacking StructureInfoTrait failed for {obj_id}, skipping")
                                     continue

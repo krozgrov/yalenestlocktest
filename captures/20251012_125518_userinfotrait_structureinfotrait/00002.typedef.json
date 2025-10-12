@@ -1,0 +1,114 @@
+{
+  "1": {
+    "message_typedef": {
+      "3": {
+        "message_typedef": {
+          "1": {
+            "message_typedef": {
+              "1": {
+                "name": "",
+                "type": "bytes"
+              },
+              "2": {
+                "name": "",
+                "type": "bytes"
+              }
+            },
+            "name": "",
+            "type": "message"
+          },
+          "2": {
+            "name": "",
+            "type": "bytes"
+          },
+          "3": {
+            "message_typedef": {
+              "1": {
+                "message_typedef": {
+                  "1": {
+                    "name": "",
+                    "type": "bytes"
+                  },
+                  "2": {
+                    "message_typedef": {
+                      "1": {
+                        "name": "",
+                        "type": "bytes"
+                      },
+                      "10": {
+                        "name": "",
+                        "type": "bytes"
+                      },
+                      "12": {
+                        "message_typedef": {
+                          "1": {
+                            "name": "",
+                            "type": "bytes"
+                          }
+                        },
+                        "name": "",
+                        "type": "message"
+                      },
+                      "13": {
+                        "message_typedef": {
+                          "1": {
+                            "name": "",
+                            "type": "bytes"
+                          },
+                          "2": {
+                            "name": "",
+                            "type": "int"
+                          }
+                        },
+                        "name": "",
+                        "type": "message"
+                      },
+                      "2": {
+                        "name": "",
+                        "type": "int"
+                      },
+                      "3": {
+                        "name": "",
+                        "type": "int"
+                      },
+                      "4": {
+                        "name": "",
+                        "type": "int"
+                      },
+                      "5": {
+                        "name": "",
+                        "type": "int"
+                      },
+                      "7": {
+                        "name": "",
+                        "type": "int"
+                      },
+                      "9": {
+                        "name": "",
+                        "type": "int"
+                      }
+                    },
+                    "name": "",
+                    "type": "message"
+                  }
+                },
+                "name": "",
+                "type": "message"
+              }
+            },
+            "name": "",
+            "type": "message"
+          },
+          "4": {
+            "name": "",
+            "type": "int"
+          }
+        },
+        "name": "",
+        "type": "message"
+      }
+    },
+    "name": "",
+    "type": "message"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "message": [
+    {
+      "get": [
+        {
+          "data": {
+            "property": {
+              "@type": "type.nestlabs.com/nest.trait.user.UserInfoTrait",
+              "legacyId": "user.674817",
+              "unknown": 10
+            }
+          },
+          "object": {
+            "id": "USER_015EADBA454C1770",
+            "key": "user_info"
+          },
+          "something": "Ag==",
+          "somethingElse": "115347598676334689"
+        },
+        {
+          "data": {
+            "property": {
+              "@type": "type.nestlabs.com/nest.trait.structure.StructureInfoTrait",
+              "legacyId": "structure.2ce65ea0-9f27-11ee-9b42-122fc90603fd",
+              "resourceStatus": [
+                {
+                  "resourceType": "cal_things.resource.RevelstokeLockResource"
+                },
+                {
+                  "resourceType": "cal_things.resource.RevelstokeResource"
+                },
+                {
+                  "resourceType": "google.resource.GoogleElaineResource"
+                },
+                {
+                  "resourceType": "google.resource.GoogleMistralResource"
+                },
+                {
+                  "resourceType": "google.resource.GoogleNewmanResource"
+                },
+                {
+                  "resourceType": "google.resource.GoogleVentoResource"
+                },
+                {
+                  "resourceType": "google.resource.SDKSampleLockResource"
+                },
+                {
+                  "resourceType": "lumi.resource.LumiOpenCloseResource"
+                },
+                {
+                  "resourceType": "lumi.resource.ZionResource"
+                },
+                {
+                  "resourceType": "nest.resource.NestConnectResource"
+                },
+                {
+                  "resourceType": "nest.resource.NestDetectResource"
+                },
+                {
+                  "resourceType": "nest.resource.NestGuardResource"
+                },
+                {
+                  "resourceType": "yale.resource.LinusLockResource"
+                }
+              ],
+              "ssid": "Josie Lane"
+            }
+          },
+          "object": {
+            "id": "STRUCTURE_018C86E39308F29F",
+            "key": "structure_info"
+          },
+          "something": "Ag==",
+          "somethingElse": "1757809908275859"
+        }
+      ]
+    }
+  ]
+}

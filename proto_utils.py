@@ -7,9 +7,12 @@ from proto.nestlabs.gateway import v2_pb2
 from proto.nest import rpc_pb2 as rpc
 
 from const import (
-  USER_AGENT_STRING,
-  URL_PROTOBUF,
-  PRODUCTION_HOSTNAME
+    USER_AGENT_STRING,
+    URL_PROTOBUF,
+    PRODUCTION_HOSTNAME,
+    API_TIMEOUT_SECONDS,
+    API_OBSERVE_TIMEOUT_SECONDS,
+    SSL_VERIFY_PATH,
 )
 
 # Loads all pb2 files into a descriptor pool for use in json_format
@@ -35,21 +38,40 @@ def GetObservePayload(traits):
     filt.trait_type = trait_name
   return req.SerializeToString()
 
-def SendGRPCRequest(session, url, access_token, payload):
+def _normalize_base_url(base_url: str) -> str:
+  return base_url.rstrip("/")
+
+
+def SendGRPCRequest(session, url, access_token, payload, base_url):
   headers = {
-    'Accept-Encoding': 'gzip, deflate, br, zstd',
-    'Content-Type': 'application/x-protobuf',
-    'User-Agent': USER_AGENT_STRING,
-    'X-Accept-Response-Streaming': 'true',
-    'Accept': 'application/x-protobuf',
-    'referer': 'https://home.nest.com/',
-    'origin': 'https://home.nest.com',
-    'X-Accept-Content-Transfer-Encoding': 'binary',
-    'Authorization': 'Basic ' + access_token
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Content-Type": "application/x-protobuf",
+    "User-Agent": USER_AGENT_STRING,
+    "X-Accept-Response-Streaming": "true",
+    "Accept": "application/x-protobuf",
+    "referer": "https://home.nest.com/",
+    "origin": "https://home.nest.com",
+    "X-Accept-Content-Transfer-Encoding": "binary",
+    "Authorization": "Basic " + access_token,
   }
-  print("Headers and payload ready, sending observe request")
-  observe_response = session.post(f'{URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME['grpc_hostname'])}{url}', headers=headers, data=payload, stream=True)
-  return observe_response
+  full_url = f"{_normalize_base_url(base_url)}{url}"
+  print(f"Headers and payload ready, sending observe request to {full_url}")
+
+  timeout = (API_TIMEOUT_SECONDS, API_OBSERVE_TIMEOUT_SECONDS)
+  response = session.post(
+      full_url,
+      headers=headers,
+      data=payload,
+      stream=True,
+      timeout=timeout,
+      verify=SSL_VERIFY_PATH,
+  )
+  print(f"Observe response status: {response.status_code}")
+  if response.status_code >= 400:
+    preview = response.text[:500] if response.text else "<no body>"
+    print(f"Observe response body preview: {preview}")
+  response.raise_for_status()
+  return response
 
     
 

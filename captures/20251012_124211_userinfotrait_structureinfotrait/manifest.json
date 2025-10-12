@@ -1,0 +1,13 @@
+[
+  {
+    "blackbox": {
+      "message": "00001.blackbox.json",
+      "pseudo_proto": "00001.pseudo.proto",
+      "typedef": "00001.typedef.json"
+    },
+    "index": 1,
+    "parsed": "00001.parsed.json",
+    "raw": "00001.raw.bin",
+    "timestamp": "2025-10-12T12:42:11Z"
+  }
+]

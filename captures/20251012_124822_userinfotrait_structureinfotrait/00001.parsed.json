@@ -1,0 +1,39 @@
+{
+  "message": [
+    {
+      "set": [
+        {
+          "interface": {
+            "mapping": {
+              "key": 4,
+              "value": 1
+            },
+            "type": "nest.iface.MobileStructureIface"
+          },
+          "propertyKey": {
+            "propertyKey": "structure_info",
+            "traitType": "nest.trait.structure.StructureInfoTrait"
+          },
+          "resourceId": "STRUCTURE_018C86E39308F29F",
+          "resourceType": "nest.resource.structure.StructureResource"
+        },
+        {
+          "interface": {
+            "mapping": {
+              "key": 2,
+              "value": 1
+            },
+            "type": "nest.iface.MobileUserIface"
+          },
+          "propertyKey": {
+            "propertyKey": "user_info",
+            "traitType": "nest.trait.user.UserInfoTrait"
+          },
+          "resourceId": "USER_015EADBA454C1770",
+          "resourceType": "nest.resource.user.UserResource"
+        }
+      ],
+      "someList": {}
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "capture_blackbox": true,
+  "capture_parsed": true,
+  "captured_chunks": 1,
+  "completed_at": "2025-10-12T12:42:11Z",
+  "interrupted": false,
+  "limit": 1,
+  "started_at": "2025-10-12T12:42:11Z",
+  "traits": [
+    "nest.trait.user.UserInfoTrait",
+    "nest.trait.structure.StructureInfoTrait"
+  ],
+  "transport_attempts": [
+    {
+      "base_url": "https://czfe11-front01-iad01.transport.home.nest.com",
+      "error": "400 Client Error: Bad Request for url: https://czfe11-front01-iad01.transport.home.nest.com/nestlabs.gateway.v2.GatewayService/Observe",
+      "status": 400
+    },
+    {
+      "base_url": "https://grpc-web.production.nest.com",
+      "status": 200
+    }
+  ],
+  "transport_effective": "https://grpc-web.production.nest.com",
+  "transport_from_session": "https://czfe11-front01-iad01.transport.home.nest.com",
+  "transport_override": null
+}
