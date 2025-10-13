@@ -269,10 +269,21 @@ def capture_observe_stream(
                 message_length = int.from_bytes(pending_buffer[1:5], "big")
 
                 if len(pending_buffer) < 5 + message_length:
+                    if echo_parsed:
+                        print(
+                            f"[reverse_engineering] waiting for frame: flag=0x{compressed_flag:02x}, "
+                            f"length={message_length}, buffered={len(pending_buffer)}"
+                        )
                     break
 
                 frame = bytes(pending_buffer[5 : 5 + message_length])
                 del pending_buffer[: 5 + message_length]
+
+                if echo_parsed:
+                    print(
+                        f"[reverse_engineering] decoding frame: flag=0x{compressed_flag:02x}, "
+                        f"length={message_length}"
+                    )
 
                 if compressed_flag != 0:
                     entry = {
