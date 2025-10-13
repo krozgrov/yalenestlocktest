@@ -8,7 +8,22 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Dict, Any, Iterable
 
-from reverse_engineering import typedef_to_pseudo_proto
+try:
+    from reverse_engineering import typedef_to_pseudo_proto
+except ModuleNotFoundError:
+    import importlib.util
+    import sys
+
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    spec = importlib.util.spec_from_file_location(
+        "reverse_engineering", project_root / "reverse_engineering.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(module)
+    typedef_to_pseudo_proto = module.typedef_to_pseudo_proto
 
 FieldType = Dict[str, Any]
 Typedef = Dict[str, FieldType]

@@ -1,0 +1,77 @@
+syntax = "proto3";
+package nest.observe;
+
+message ObservedMessage {
+  Field1Message field_1 = 1;
+
+  message Field1Message {
+    Field1Message field_1 = 1;
+    Field3Message field_3 = 3;
+    Field5Message field_5 = 5;
+
+    message Field1Message {
+      bytes field_1 = 1;
+      bytes field_2 = 2;
+      Field4Message field_4 = 4;
+      Field7Message field_7 = 7;
+
+      message Field4Message {
+        bytes field_1 = 1;
+        bytes field_2 = 2;
+      }
+      message Field7Message {
+        bytes field_2 = 2;
+        Field4Message field_4 = 4;
+
+        message Field4Message {
+          int64 field_1 = 1;
+          int64 field_2 = 2;
+        }
+      }
+    }
+    message Field3Message {
+      Field1Message field_1 = 1;
+      bytes field_2 = 2;
+      Field3Message field_3 = 3;
+      int64 field_4 = 4;
+
+      message Field1Message {
+        bytes field_1 = 1;
+        bytes field_2 = 2;
+      }
+      message Field3Message {
+        Field1Message field_1 = 1;
+
+        message Field1Message {
+          bytes field_1 = 1;
+          Field2Message field_2 = 2;
+
+          message Field2Message {
+            bytes field_1 = 1;
+            int64 field_2 = 2;
+            int64 field_3 = 3;
+            int64 field_4 = 4;
+            int64 field_5 = 5;
+            int64 field_7 = 7;
+            int64 field_9 = 9;
+            bytes field_10 = 10;
+            Field12Message field_12 = 12;
+            Field13Message field_13 = 13;
+
+            message Field12Message {
+              bytes field_1 = 1;
+            }
+            message Field13Message {
+              bytes field_1 = 1;
+              int64 field_2 = 2;
+            }
+          }
+        }
+      }
+    }
+    message Field5Message {
+      int64 field_1 = 1;
+      int64 field_2 = 2;
+    }
+  }
+}
