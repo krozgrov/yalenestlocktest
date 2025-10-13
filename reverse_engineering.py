@@ -259,6 +259,11 @@ def capture_observe_stream(
                 continue
             pending_buffer.extend(chunk)
 
+            if echo_parsed:
+                print(
+                    f"[reverse_engineering] received chunk: {len(chunk)} bytes, buffered={len(pending_buffer)}"
+                )
+
             while len(pending_buffer) >= 5:
                 compressed_flag = pending_buffer[0]
                 message_length = int.from_bytes(pending_buffer[1:5], "big")

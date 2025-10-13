@@ -72,7 +72,10 @@ def SendGRPCRequest(session, url, access_token, payload, base_url):
   full_url = f"{_normalize_base_url(base_url)}{url}"
   print(f"Headers and payload ready, sending observe request to {full_url}")
 
-  timeout = (API_TIMEOUT_SECONDS, API_OBSERVE_TIMEOUT_SECONDS)
+  timeout = (
+      API_TIMEOUT_SECONDS,
+      API_OBSERVE_TIMEOUT_SECONDS if API_OBSERVE_TIMEOUT_SECONDS else None,
+  )
   response = session.post(
       full_url,
       headers=headers,
