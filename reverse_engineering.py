@@ -344,6 +344,68 @@ def capture_observe_stream(
 
             if limit and limit > 0 and chunk_count >= limit:
                 break
+
+        # Handle any residual data that never completed a full parse before the stream closed.
+        if pending_buffer:
+            try:
+                stream_body = rpc.StreamBody()
+                stream_body.ParseFromString(pending_buffer)
+            except DecodeError as err:
+                entry = {
+                    "index": chunk_count + 1,
+                    "timestamp": utc_timestamp(),
+                    "raw_error": "pending_buffer.bin",
+                    "parse_error": str(err),
+                }
+                raw_error_path = run_dir / "pending_buffer.bin"
+                raw_error_path.write_bytes(pending_buffer)
+                manifest.append(entry)
+            else:
+                chunk_count += 1
+                chunk_prefix = f"{chunk_count:05d}"
+                raw_bytes = bytes(pending_buffer)
+                raw_path = run_dir / f"{chunk_prefix}.raw.bin"
+                raw_path.write_bytes(raw_bytes)
+
+                entry = {
+                    "index": chunk_count,
+                    "timestamp": utc_timestamp(),
+                    "raw": raw_path.name,
+                }
+
+                if capture_blackbox:
+                    try:
+                        message_json, typedef = bbp.protobuf_to_json(raw_bytes)
+                        blackbox_path = run_dir / f"{chunk_prefix}.blackbox.json"
+                        blackbox_path.write_text(message_json)
+
+                        typedef_path = run_dir / f"{chunk_prefix}.typedef.json"
+                        typedef_path.write_text(json.dumps(typedef, indent=2, sort_keys=True, default=str))
+
+                        pseudo_proto = typedef_to_pseudo_proto(typedef, "ObservedMessage")
+                        pseudo_path = run_dir / f"{chunk_prefix}.pseudo.proto"
+                        pseudo_path.write_text(pseudo_proto)
+
+                        entry["blackbox"] = {
+                            "message": blackbox_path.name,
+                            "typedef": typedef_path.name,
+                            "pseudo_proto": pseudo_path.name,
+                        }
+                    except Exception as err:  # noqa: BLE001
+                        entry["blackbox_error"] = str(err)
+
+                if capture_parsed:
+                    try:
+                        parsed = ParseStreamBody(raw_bytes)
+                        parsed_path = run_dir / f"{chunk_prefix}.parsed.json"
+                        parsed_path.write_text(json.dumps(parsed, indent=2, sort_keys=True))
+                        entry["parsed"] = parsed_path.name
+                    except Exception as err:  # noqa: BLE001
+                        entry["parsed_error"] = str(err)
+
+                manifest.append(entry)
+            finally:
+                pending_buffer.clear()
     except KeyboardInterrupt:
         interrupted = True
     finally:
