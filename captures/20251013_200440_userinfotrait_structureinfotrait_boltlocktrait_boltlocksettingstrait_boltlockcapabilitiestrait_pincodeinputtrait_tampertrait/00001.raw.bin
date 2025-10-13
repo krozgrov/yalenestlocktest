@@ -1,15 +1,0 @@
-
-º
-ð
-DEVICE_00177A0000060303yale.resource.LinusLockResource"*
-tamper weave.trait.security.TamperTrait"H
-bolt_lock_capabilities.weave.trait.security.BoltLockCapabilitiesTrait"/
-	bolt_lock"weave.trait.security.BoltLockTrait"@
-bolt_lock_settings*weave.trait.security.BoltLockSettingsTrait"7
-pincode_input&weave.trait.security.PincodeInputTrait:&weave.iface.common.DeviceIface":%nest.iface.LocatedDeviceIface":'nest.iface.MobileLinusLockIface":;3nest.iface.security.SecurityActionOnUnlockLockIface":0(weave.iface.lock.VoiceAssistantLockIface":+#nest.iface.AutoLockOnCloseLockIface"
-«
-STRUCTURE_018C86E39308F29F)nest.resource.structure.StructureResource"9
-structure_info'nest.trait.structure.StructureInfoTrait:'nest.iface.MobileStructureIface"
-ˆ
-USER_015EADBA454C1770nest.resource.user.UserResource"*
-	user_infonest.trait.user.UserInfoTrait:"nest.iface.MobileUserIface"*Ø¶µÇÀ÷·ˆ

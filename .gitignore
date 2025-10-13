@@ -17,6 +17,8 @@ venv/
 *.egg
 build/
 dist/
+captures/
+proto/autogen/
 
 # Pipenv / Poetry
 Pipfile.lock
