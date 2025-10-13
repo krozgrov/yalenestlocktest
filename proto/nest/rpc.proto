@@ -28,16 +28,12 @@ message PropertyKeyTraitPair {
 }
 
 message TraitSetProperty {
-  string resource_id = 1;
-  string resource_type = 2;
-  PropertyKeyTraitPair property_key = 4;
-  nest.iface.Interface interface = 7;
+  ObjectIdPair object = 1;
+  bytes operation = 2;
+  google.protobuf.Any property = 3;
+  uint64 monotonic_version = 4;
+  repeated nest.iface.Interface interface = 7;
 }
-
-// message TraitSetProperty {
-//   ObjectIdPair object = 1;
-//   google.protobuf.Any property = 2;
-// }
 
 message CatalogMetadata {
   uint64 catalog_version = 1;

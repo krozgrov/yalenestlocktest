@@ -2,6 +2,7 @@ from google.protobuf import json_format, descriptor_database, descriptor_pool
 from google.protobuf.descriptor_pb2 import FileDescriptorProto
 import json
 import importlib
+from google.protobuf import any_pb2, duration_pb2, timestamp_pb2, wrappers_pb2
 
 from proto.nestlabs.gateway import v2_pb2
 from proto.nest import rpc_pb2 as rpc
@@ -19,6 +20,20 @@ from const import (
 proto_db = descriptor_database.DescriptorDatabase()
 proto_pool = descriptor_pool.DescriptorPool(proto_db)
 import os
+
+_GOOGLE_DEPENDENCIES = (
+    any_pb2.DESCRIPTOR,
+    duration_pb2.DESCRIPTOR,
+    timestamp_pb2.DESCRIPTOR,
+    wrappers_pb2.DESCRIPTOR,
+)
+
+for desc in _GOOGLE_DEPENDENCIES:
+  serialized_desc = desc.serialized_pb
+  file_descriptor = FileDescriptorProto()
+  file_descriptor.ParseFromString(serialized_desc)
+  proto_db.Add(file_descriptor)
+
 for root, dirs, files in os.walk('proto'):
   for file in files:
     if file.endswith('pb2.py') and not file.startswith('__'):

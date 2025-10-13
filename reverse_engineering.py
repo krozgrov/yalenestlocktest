@@ -12,9 +12,12 @@ from typing import Any, Dict, Iterable, Tuple
 import blackboxprotobuf as bbp
 from requests import HTTPError
 
+from google.protobuf.message import DecodeError
+
 from auth import GetSessionWithAuth
 from const import ENDPOINT_OBSERVE, PRODUCTION_HOSTNAME, URL_PROTOBUF
 from proto_utils import GetObservePayload, ParseStreamBody, SendGRPCRequest
+from proto.nest import rpc_pb2 as rpc
 
 DEFAULT_TRAITS = [
     "nest.trait.user.UserInfoTrait",
@@ -236,6 +239,7 @@ def capture_observe_stream(
     manifest: list[Dict[str, Any]] = []
     chunk_count = 0
     interrupted = False
+    pending_buffer = bytearray()
 
     run_metadata = {
         "traits": list(traits),
@@ -253,13 +257,39 @@ def capture_observe_stream(
         for chunk in response.iter_content(chunk_size=None):
             if not chunk:
                 continue
+            pending_buffer.extend(chunk)
+
+            try:
+                stream_body = rpc.StreamBody()
+                stream_body.ParseFromString(pending_buffer)
+            except DecodeError as err:
+                # Wait for more data if the message is incomplete.
+                err_text = str(err)
+                if (
+                    "Truncated message" in err_text
+                    or "Unexpected end-group" in err_text
+                    or err_text.startswith("Error parsing message")
+                ):
+                    continue
+                entry = {
+                    "index": chunk_count + 1,
+                    "timestamp": utc_timestamp(),
+                    "raw_error": "pending_buffer.bin",
+                    "parse_error": str(err),
+                }
+                raw_error_path = run_dir / "pending_buffer.bin"
+                raw_error_path.write_bytes(pending_buffer)
+                manifest.append(entry)
+                pending_buffer.clear()
+                continue
+
             chunk_count += 1
             chunk_prefix = f"{chunk_count:05d}"
-
+            raw_bytes = bytes(pending_buffer)
             raw_path = run_dir / f"{chunk_prefix}.raw.bin"
-            raw_path.write_bytes(chunk)
+            raw_path.write_bytes(raw_bytes)
 
-            entry: Dict[str, Any] = {
+            entry = {
                 "index": chunk_count,
                 "timestamp": utc_timestamp(),
                 "raw": raw_path.name,
@@ -267,7 +297,7 @@ def capture_observe_stream(
 
             if capture_blackbox:
                 try:
-                    message_json, typedef = bbp.protobuf_to_json(chunk)
+                    message_json, typedef = bbp.protobuf_to_json(raw_bytes)
                     blackbox_path = run_dir / f"{chunk_prefix}.blackbox.json"
                     blackbox_path.write_text(message_json)
 
@@ -295,7 +325,7 @@ def capture_observe_stream(
 
             if capture_parsed:
                 try:
-                    parsed = ParseStreamBody(chunk)
+                    parsed = ParseStreamBody(raw_bytes)
                     parsed_path = run_dir / f"{chunk_prefix}.parsed.json"
                     parsed_path.write_text(json.dumps(parsed, indent=2, sort_keys=True))
                     entry["parsed"] = parsed_path.name
@@ -310,6 +340,7 @@ def capture_observe_stream(
                         print(f"[reverse_engineering] structured decode failed: {err}", file=sys.stderr)
 
             manifest.append(entry)
+            pending_buffer.clear()
 
             if limit and limit > 0 and chunk_count >= limit:
                 break
