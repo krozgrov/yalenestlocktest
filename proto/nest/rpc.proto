@@ -17,9 +17,9 @@ message DynamicProp_Indirect {
 
 message TraitGetProperty {
   ObjectIdPair object = 1;
-  bytes something = 2;
+  bytes operation = 2;
   DynamicProp_Indirect data = 3;
-  int64 something_else = 4;
+  uint64 monotonic_version = 4;
 }
 
 message PropertyKeyTraitPair {

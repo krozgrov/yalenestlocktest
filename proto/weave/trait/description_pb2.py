@@ -6,7 +6,16 @@
 """Generated protocol buffer code."""
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
-from google.protobuf import runtime_version as _runtime_version
+try:
+    from google.protobuf import runtime_version as _runtime_version
+except ImportError:  # pragma: no cover
+    class _RuntimeVersionStub:
+        @staticmethod
+        def ValidateProtobufRuntimeVersion(*args, **kwargs):
+            return None
+        class Domain:
+            PUBLIC = None
+    _runtime_version = _RuntimeVersionStub()
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
 _runtime_version.ValidateProtobufRuntimeVersion(
