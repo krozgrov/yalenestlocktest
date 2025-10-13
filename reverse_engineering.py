@@ -239,8 +239,6 @@ def capture_observe_stream(
     manifest: list[Dict[str, Any]] = []
     chunk_count = 0
     interrupted = False
-    pending_buffer = bytearray()
-
     run_metadata = {
         "traits": list(traits),
         "limit": limit,
@@ -257,135 +255,66 @@ def capture_observe_stream(
         for chunk in response.iter_content(chunk_size=None):
             if not chunk:
                 continue
-            pending_buffer.extend(chunk)
 
-            if echo_parsed:
-                print(
-                    f"[reverse_engineering] received chunk: {len(chunk)} bytes, buffered={len(pending_buffer)}"
-                )
+            chunk_count += 1
+            chunk_prefix = f"{chunk_count:05d}"
+            raw_path = run_dir / f"{chunk_prefix}.raw.bin"
+            raw_path.write_bytes(chunk)
 
-            while len(pending_buffer) >= 5:
-                compressed_flag = pending_buffer[0]
-                message_length = int.from_bytes(pending_buffer[1:5], "big")
+            entry = {
+                "index": chunk_count,
+                "timestamp": utc_timestamp(),
+                "raw": raw_path.name,
+            }
 
-                if len(pending_buffer) < 5 + message_length:
-                    if echo_parsed:
-                        print(
-                            f"[reverse_engineering] waiting for frame: flag=0x{compressed_flag:02x}, "
-                            f"length={message_length}, buffered={len(pending_buffer)}"
-                        )
-                    break
-
-                frame = bytes(pending_buffer[5 : 5 + message_length])
-                del pending_buffer[: 5 + message_length]
-
-                if echo_parsed:
-                    print(
-                        f"[reverse_engineering] decoding frame: flag=0x{compressed_flag:02x}, "
-                        f"length={message_length}"
-                    )
-
-                if compressed_flag != 0:
-                    entry = {
-                        "index": chunk_count + 1,
-                        "timestamp": utc_timestamp(),
-                        "raw_error": f"compressed_frame_{chunk_count + 1:05d}.bin",
-                        "parse_error": f"Compressed gRPC-Web frame (flag={compressed_flag}) not supported",
-                    }
-                    error_path = run_dir / entry["raw_error"]
-                    error_path.write_bytes(frame)
-                    manifest.append(entry)
-                    continue
-
+            if capture_blackbox:
                 try:
-                    stream_body = rpc.StreamBody()
-                    stream_body.ParseFromString(frame)
-                except DecodeError as err:
-                    entry = {
-                        "index": chunk_count + 1,
-                        "timestamp": utc_timestamp(),
-                        "raw_error": f"incomplete_frame_{chunk_count + 1:05d}.bin",
-                        "parse_error": str(err),
+                    message_json, typedef = bbp.protobuf_to_json(chunk)
+                    blackbox_path = run_dir / f"{chunk_prefix}.blackbox.json"
+                    blackbox_path.write_text(message_json)
+
+                    typedef_path = run_dir / f"{chunk_prefix}.typedef.json"
+                    typedef_path.write_text(json.dumps(typedef, indent=2, sort_keys=True, default=str))
+
+                    pseudo_proto = typedef_to_pseudo_proto(typedef, "ObservedMessage")
+                    pseudo_path = run_dir / f"{chunk_prefix}.pseudo.proto"
+                    pseudo_path.write_text(pseudo_proto)
+
+                    entry["blackbox"] = {
+                        "message": blackbox_path.name,
+                        "typedef": typedef_path.name,
+                        "pseudo_proto": pseudo_path.name,
                     }
-                    error_path = run_dir / entry["raw_error"]
-                    error_path.write_bytes(frame)
-                    manifest.append(entry)
-                    continue
 
-                chunk_count += 1
-                chunk_prefix = f"{chunk_count:05d}"
-                raw_path = run_dir / f"{chunk_prefix}.raw.bin"
-                raw_path.write_bytes(frame)
+                    if echo_blackbox:
+                        print("############ blackbox message ############")
+                        print(message_json)
+                        print("##########################################")
+                except Exception as err:  # noqa: BLE001
+                    entry["blackbox_error"] = str(err)
+                    if echo_blackbox:
+                        print(f"[reverse_engineering] blackbox decode failed: {err}", file=sys.stderr)
 
-                entry = {
-                    "index": chunk_count,
-                    "timestamp": utc_timestamp(),
-                    "raw": raw_path.name,
-                }
+            if capture_parsed:
+                try:
+                    parsed = ParseStreamBody(chunk)
+                    parsed_path = run_dir / f"{chunk_prefix}.parsed.json"
+                    parsed_path.write_text(json.dumps(parsed, indent=2, sort_keys=True))
+                    entry["parsed"] = parsed_path.name
 
-                if capture_blackbox:
-                    try:
-                        message_json, typedef = bbp.protobuf_to_json(frame)
-                        blackbox_path = run_dir / f"{chunk_prefix}.blackbox.json"
-                        blackbox_path.write_text(message_json)
+                    if echo_parsed:
+                        print("############ parsed message ############")
+                        print(json.dumps(parsed, indent=2))
+                        print("########################################")
+                except Exception as err:  # noqa: BLE001
+                    entry["parsed_error"] = str(err)
+                    if echo_parsed:
+                        print(f"[reverse_engineering] structured decode failed: {err}", file=sys.stderr)
 
-                        typedef_path = run_dir / f"{chunk_prefix}.typedef.json"
-                        typedef_path.write_text(json.dumps(typedef, indent=2, sort_keys=True, default=str))
-
-                        pseudo_proto = typedef_to_pseudo_proto(typedef, "ObservedMessage")
-                        pseudo_path = run_dir / f"{chunk_prefix}.pseudo.proto"
-                        pseudo_path.write_text(pseudo_proto)
-
-                        entry["blackbox"] = {
-                            "message": blackbox_path.name,
-                            "typedef": typedef_path.name,
-                            "pseudo_proto": pseudo_path.name,
-                        }
-
-                        if echo_blackbox:
-                            print("############ blackbox message ############")
-                            print(message_json)
-                            print("##########################################")
-                    except Exception as err:  # noqa: BLE001
-                        entry["blackbox_error"] = str(err)
-                        if echo_blackbox:
-                            print(f"[reverse_engineering] blackbox decode failed: {err}", file=sys.stderr)
-
-                if capture_parsed:
-                    try:
-                        parsed = ParseStreamBody(frame)
-                        parsed_path = run_dir / f"{chunk_prefix}.parsed.json"
-                        parsed_path.write_text(json.dumps(parsed, indent=2, sort_keys=True))
-                        entry["parsed"] = parsed_path.name
-
-                        if echo_parsed:
-                            print("############ parsed message ############")
-                            print(json.dumps(parsed, indent=2))
-                            print("########################################")
-                    except Exception as err:  # noqa: BLE001
-                        entry["parsed_error"] = str(err)
-                        if echo_parsed:
-                            print(f"[reverse_engineering] structured decode failed: {err}", file=sys.stderr)
-
-                manifest.append(entry)
-
-                if limit and limit > 0 and chunk_count >= limit:
-                    break
+            manifest.append(entry)
 
             if limit and limit > 0 and chunk_count >= limit:
                 break
-
-        if pending_buffer:
-            pending_path = run_dir / "pending_buffer.bin"
-            pending_path.write_bytes(pending_buffer)
-            manifest.append(
-                {
-                    "index": chunk_count + 1,
-                    "timestamp": utc_timestamp(),
-                    "raw_error": pending_path.name,
-                    "parse_error": "Stream ended with incomplete gRPC-Web frame",
-                }
-            )
     except KeyboardInterrupt:
         interrupted = True
     finally:
