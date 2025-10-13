@@ -256,6 +256,10 @@ def capture_observe_stream(
             if not chunk:
                 continue
 
+            # Skip the initial gRPC handshake / keep-alive frames that carry no payload.
+            if not chunk.strip():
+                continue
+
             chunk_count += 1
             chunk_prefix = f"{chunk_count:05d}"
             raw_path = run_dir / f"{chunk_prefix}.raw.bin"

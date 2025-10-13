@@ -1,11 +1,11 @@
 {
   "capture_blackbox": true,
   "capture_parsed": true,
-  "captured_chunks": 0,
-  "completed_at": "2025-10-13T19:12:00Z",
-  "interrupted": true,
+  "captured_chunks": 1,
+  "completed_at": "2025-10-13T20:04:34Z",
+  "interrupted": false,
   "limit": 1,
-  "started_at": "2025-10-13T19:11:18Z",
+  "started_at": "2025-10-13T20:04:34Z",
   "traits": [
     "nest.trait.user.UserInfoTrait",
     "nest.trait.structure.StructureInfoTrait",
@@ -17,8 +17,8 @@
   ],
   "transport_attempts": [
     {
-      "base_url": "https://czfe69-front01-iad01.transport.home.nest.com",
-      "error": "400 Client Error: Bad Request for url: https://czfe69-front01-iad01.transport.home.nest.com/nestlabs.gateway.v2.GatewayService/Observe",
+      "base_url": "https://czfe30-front01-iad01.transport.home.nest.com",
+      "error": "400 Client Error: Bad Request for url: https://czfe30-front01-iad01.transport.home.nest.com/nestlabs.gateway.v2.GatewayService/Observe",
       "status": 400
     },
     {
@@ -27,6 +27,6 @@
     }
   ],
   "transport_effective": "https://grpc-web.production.nest.com",
-  "transport_from_session": "https://czfe69-front01-iad01.transport.home.nest.com",
+  "transport_from_session": "https://czfe30-front01-iad01.transport.home.nest.com",
   "transport_override": null
 }
