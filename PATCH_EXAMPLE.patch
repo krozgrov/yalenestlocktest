@@ -1,0 +1,48 @@
+# Example patch for protobuf_handler.py
+# This shows the exact changes to extract structure and user IDs
+
+--- a/custom_components/nest_yale_lock/protobuf_handler.py
++++ b/custom_components/nest_yale_lock/protobuf_handler.py
+@@ -151,6 +151,20 @@ class NestProtobufHandler:
+             for msg in self.stream_body.message:
+                 for get_op in msg.get:
+                     obj_id = get_op.object.id if get_op.object.id else None
+                     obj_key = get_op.object.key if get_op.object.key else "unknown"
++
++                    # Extract structure ID from object ID if present
++                    if obj_id and obj_id.startswith("STRUCTURE_"):
++                        structure_id = obj_id.replace("STRUCTURE_", "")
++                        if not locks_data.get("structure_id"):
++                            locks_data["structure_id"] = structure_id
++                            _LOGGER.debug("Extracted structure_id from object ID: %s", structure_id)
++
++                    # Extract user ID from object ID if present
++                    if obj_id and obj_id.startswith("USER_"):
++                        user_id = obj_id.replace("USER_", "")
++                        if not locks_data.get("user_id"):
++                            locks_data["user_id"] = user_id
++                            _LOGGER.debug("Extracted user_id from object ID: %s", user_id)
++
+                     property_any = getattr(get_op.data, "property", None)
+                     property_any = _normalize_any_type(property_any) if property_any else None
+                     type_url = getattr(property_any, "type_url", None) if property_any else None
+@@ -193,6 +207,12 @@ class NestProtobufHandler:
+                             if structure.legacy_id:
+                                 locks_data["structure_id"] = structure.legacy_id.split(".")[1]
+                             _LOGGER.debug("Parsed StructureInfoTrait for %s: structure_id=%s", obj_id, locks_data["structure_id"])
++                        # Also check obj_id as fallback
++                        elif obj_id and obj_id.startswith("STRUCTURE_"):
++                            locks_data["structure_id"] = obj_id.replace("STRUCTURE_", "")
++                            _LOGGER.debug("Extracted structure_id from obj_id fallback: %s", locks_data["structure_id"])
+                     except Exception as err:
+                         _LOGGER.error("Failed to parse StructureInfoTrait for %s: %s", obj_id, err, exc_info=True)
+                     elif "UserInfoTrait" in (type_url or ""):
+                         try:
+                             locks_data["user_id"] = obj_id
++                            # Also check if obj_id starts with USER_ prefix
++                            if locks_data["user_id"] and locks_data["user_id"].startswith("USER_"):
++                                locks_data["user_id"] = locks_data["user_id"].replace("USER_", "")
++                                _LOGGER.debug("Cleaned user_id: %s", locks_data["user_id"])
+                         except Exception as e:
+                             _LOGGER.error("Failed to parse UserInfoTrait: %s", e, exc_info=True)
+

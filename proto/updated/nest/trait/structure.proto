@@ -1,0 +1,32 @@
+// Protobuf schema for response to Nest Observe API call
+
+syntax = "proto3";
+
+package nest.trait.structure;
+
+// Messages
+
+message StructureInfoTrait {
+  string legacy_id = 1;
+  string ssid = 10;
+  repeated ResourceStatus resource_status = 13;
+}
+
+message ResourceStatus {
+  string resource_type = 1;
+  string status = 2;
+}
+
+// Indirects
+
+message String_Indirect {
+  string value = 1;
+}
+
+message Float_Indirect {
+  float value = 1;
+}
+
+message Int32_Indirect {
+  int32 value = 1;
+}

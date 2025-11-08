@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+// weave.trait.security.BoltLockCapabilitiesTrait
+message BoltLockCapabilities {
+  message BoltLockCapabilitiesField1 {
+    bytes field_1 = 1;
+    bytes field_2 = 2;
+    message BoltLockCapabilitiesField4 {
+      bytes field_1 = 1;
+      bytes field_2 = 2;
+    }
+
+    BoltLockCapabilitiesField4 field_4 = 4;
+    message BoltLockCapabilitiesField7 {
+      bytes field_2 = 2;
+      message BoltLockCapabilitiesField4 {
+        int64 field_1 = 1;
+        int64 field_2 = 2;
+      }
+
+      BoltLockCapabilitiesField4 field_4 = 4;
+    }
+
+    BoltLockCapabilitiesField7 field_7 = 7;
+  }
+
+  BoltLockCapabilitiesField1 field_1 = 1;
+  message BoltLockCapabilitiesField3 {
+    message BoltLockCapabilitiesField1 {
+      bytes field_1 = 1;
+      bytes field_2 = 2;
+    }
+
+    BoltLockCapabilitiesField1 field_1 = 1;
+    bytes field_2 = 2;
+    message BoltLockCapabilitiesField3 {
+      message BoltLockCapabilitiesField1 {
+        bytes field_1 = 1;
+        message BoltLockCapabilitiesField2 {
+          bytes field_1 = 1;
+          int64 field_2 = 2;
+          int64 field_3 = 3;
+          int64 field_4 = 4;
+          int64 field_5 = 5;
+          int64 field_7 = 7;
+          int64 field_9 = 9;
+          bytes field_10 = 10;
+          message BoltLockCapabilitiesField12 {
+            bytes field_1 = 1;
+          }
+
+          BoltLockCapabilitiesField12 field_12 = 12;
+          message BoltLockCapabilitiesField13 {
+            bytes field_1 = 1;
+            int64 field_2 = 2;
+          }
+
+          BoltLockCapabilitiesField13 field_13 = 13;
+        }
+
+        BoltLockCapabilitiesField2 field_2 = 2;
+      }
+
+      BoltLockCapabilitiesField1 field_1 = 1;
+    }
+
+    BoltLockCapabilitiesField3 field_3 = 3;
+    int64 field_4 = 4;
+  }
+
+  BoltLockCapabilitiesField3 field_3 = 3;
+  message BoltLockCapabilitiesField5 {
+    int64 field_1 = 1;
+    int64 field_2 = 2;
+  }
+
+  BoltLockCapabilitiesField5 field_5 = 5;
+}

@@ -133,7 +133,10 @@ trait_names = [
   "weave.trait.security.BoltLockSettingsTrait",
   "weave.trait.security.BoltLockCapabilitiesTrait",
   "weave.trait.security.PincodeInputTrait",
-  "weave.trait.security.TamperTrait"
+  "weave.trait.security.TamperTrait",
+  # HomeKit-relevant traits
+  "weave.trait.description.DeviceIdentityTrait",  # Serial, firmware, model
+  "weave.trait.power.BatteryPowerSourceTrait",    # Battery level, status
 ]
 for trait_name in trait_names:
     filt = req.filter.add()

@@ -1,3 +1,9 @@
+"""
+Enhanced protobuf handler that extracts ALL trait data.
+
+This is a copy of protobuf_handler.py with enhancements to decode all traits.
+"""
+
 import os
 import logging
 import asyncio
@@ -15,8 +21,19 @@ from const import (
     PRODUCTION_HOSTNAME,
 )
 
+# Import HomeKit trait decoders
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent / "proto"))
+
+try:
+    from proto.weave.trait import description_pb2
+    from proto.weave.trait import power_pb2
+    PROTO_AVAILABLE = True
+except ImportError:
+    PROTO_AVAILABLE = False
+
 _LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
 
 MAX_BUFFER_SIZE = 4194304  # 4MB
 LOG_PAYLOAD_TO_FILE = True
@@ -37,7 +54,7 @@ def _normalize_any_type(any_message: Any) -> Any:
         return normalized
     return any_message
 
-class NestProtobufHandler:
+class EnhancedProtobufHandler:
     def __init__(self):
         self.buffer = bytearray()
         self.pending_length = None
@@ -67,18 +84,10 @@ class NestProtobufHandler:
 
         if not message:
             _LOGGER.error("Empty protobuf message received.")
-            return {"yale": {}, "user_id": None, "structure_id": None}
+            return {"yale": {}, "user_id": None, "structure_id": None, "all_traits": {}}
 
         locks_data = {"yale": {}, "user_id": None, "structure_id": None, "all_traits": {}}
         all_traits = {}
-
-        # Import HomeKit trait decoders
-        try:
-            from proto.weave.trait import description_pb2
-            from proto.weave.trait import power_pb2
-            PROTO_AVAILABLE = True
-        except ImportError:
-            PROTO_AVAILABLE = False
 
         try:
             self.stream_body.Clear()
@@ -97,10 +106,10 @@ class NestProtobufHandler:
                         type_url = "weave.trait.security.BoltLockTrait"
 
                     _LOGGER.debug(f"Extracting `{type_url}` for `{obj_id}` with key `{obj_key}`")
-                    
-                    # Extract ALL trait data
+
+                    # Extract trait data for ALL traits
                     if property_any and type_url:
-                        trait_key = f"{obj_id}:{type_url}"
+                        trait_key = f"{obj_id}:{type_url}" if obj_id and type_url else None
                         trait_info = {"object_id": obj_id, "type_url": type_url, "decoded": False}
                         
                         try:
@@ -134,9 +143,12 @@ class NestProtobufHandler:
                             trait_info["error"] = str(e)
                             _LOGGER.debug(f"Error decoding trait {type_url}: {e}")
                         
-                        all_traits[trait_key] = trait_info
+                        # Store trait info
+                        if trait_key:
+                            all_traits[trait_key] = trait_info
 
-                    if "BoltLockTrait" in type_url and obj_id:
+                    # Existing lock-specific processing
+                    if "BoltLockTrait" in (type_url or "") and obj_id:
                         bolt_lock = weave_security_pb2.BoltLockTrait()
                         try:
                             if not property_any:
@@ -164,11 +176,9 @@ class NestProtobufHandler:
                             _LOGGER.error(f"Unexpected error unpacking BoltLockTrait for {obj_id}: {e}")
                             continue
 
-                    elif "StructureInfoTrait" in type_url and obj_id:
+                    elif "StructureInfoTrait" in (type_url or "") and obj_id:
                         try:
-                            # Log raw structure_info for debugging
                             _LOGGER.debug(f"Raw structure_info data for {obj_id}: {property_any}")
-                            # Extract legacyId or use obj_id as fallback
                             if property_any:
                                 structure = nest_structure_pb2.StructureInfoTrait()
                                 unpacked = property_any.Unpack(structure)
@@ -181,7 +191,7 @@ class NestProtobufHandler:
                                 _LOGGER.debug(f"Parsed structure_info for {obj_id}: structure_id={locks_data['structure_id']}")
                         except Exception as e:
                             _LOGGER.error(f"Failed to parse structure_info for {obj_id}: {e}")
-                    elif "UserInfoTrait" in type_url:
+                    elif "UserInfoTrait" in (type_url or ""):
                         try:
                             locks_data["user_id"] = obj_id
                         except Exception as e:
@@ -189,8 +199,6 @@ class NestProtobufHandler:
 
             locks_data["all_traits"] = all_traits
             _LOGGER.debug(f"Final lock data: {locks_data}")
-            if all_traits:
-                _LOGGER.info(f"Decoded {len([t for t in all_traits.values() if t.get('decoded')])} trait(s) successfully")
             return locks_data
 
         except DecodeError as e:
@@ -209,10 +217,24 @@ class NestProtobufHandler:
             self.pending_length = None
             try:
                 async for data in connection.stream(api_url, headers, observe_data):
-                    if not isinstance(data, bytes):
-                        _LOGGER.error(f"Received non-bytes data: {data}")
+                    if not isinstance(data, bytes) or not data.strip():
                         continue
 
+                    # Try parsing the chunk directly as StreamBody first (like main.py does)
+                    # If that fails, try varint extraction
+                    try:
+                        test_stream = rpc.StreamBody()
+                        test_stream.ParseFromString(data)
+                        # Success! This chunk is a complete StreamBody
+                        locks_data = await self._process_message(data)
+                        if locks_data.get("yale") or locks_data.get("user_id") or locks_data.get("structure_id") or locks_data.get("all_traits"):
+                            yield locks_data
+                        continue
+                    except:
+                        # Not a direct StreamBody, try varint extraction
+                        pass
+
+                    # Varint extraction path (for gRPC-web format)
                     if self.pending_length is None:
                         self.pending_length, offset = self._decode_varint(data, 0)
                         if self.pending_length is None or offset >= len(data):
@@ -230,7 +252,7 @@ class NestProtobufHandler:
                         locks_data = await self._process_message(message)
                         self.pending_length = None if len(self.buffer) < 5 else self._decode_varint(self.buffer, 0)[0]
 
-                        if locks_data.get("yale"):
+                        if locks_data.get("yale") or locks_data.get("user_id") or locks_data.get("structure_id") or locks_data.get("all_traits"):
                             yield locks_data
                             continue
 
@@ -240,43 +262,10 @@ class NestProtobufHandler:
                         locks_data = await self._process_message(message)
                         self.pending_length = None if len(self.buffer) < 5 else self._decode_varint(self.buffer, 0)[0]
 
-                        if locks_data.get("yale"):
+                        if locks_data.get("yale") or locks_data.get("user_id") or locks_data.get("structure_id") or locks_data.get("all_traits"):
                             yield locks_data
-                            continue
 
-                await asyncio.sleep(PING_INTERVAL_SECONDS / 1000)
-
-            except asyncio.TimeoutError:
-                _LOGGER.warning("Stream timeout, retrying...")
-                yield {"yale": {}, "user_id": None, "structure_id": None}
             except Exception as e:
                 _LOGGER.error(f"Stream error: {e}", exc_info=True)
+                await asyncio.sleep(RETRY_DELAY_SECONDS)
 
-            _LOGGER.info(f"Retrying stream in {RETRY_DELAY_SECONDS} seconds")
-            await asyncio.sleep(RETRY_DELAY_SECONDS)
-            yield None
-
-    async def refresh_state(self, connection, access_token):
-        headers = {
-            "Authorization": f"Basic {access_token}",
-            "Content-Type": "application/x-protobuf",
-            "User-Agent": USER_AGENT_STRING,
-            "X-Accept-Response-Streaming": "true",
-            "Accept": "application/x-protobuf",
-        }
-
-        api_url = f"{URL_PROTOBUF.format(grpc_hostname=PRODUCTION_HOSTNAME['grpc_hostname'])}{ENDPOINT_OBSERVE}"
-        observe_data = await read_protobuf_file(os.path.join(os.path.dirname(__file__), "proto", "ObserveTraits.bin"))
-
-        try:
-            async with connection.session.post(api_url, headers=headers, data=observe_data) as response:
-                if response.status != 200:
-                    _LOGGER.error(f"HTTP {response.status}: {await response.text()}")
-                    return {}
-                async for chunk in response.content.iter_chunked(1024):
-                    locks_data = await self._process_message(chunk)
-                    if locks_data.get("yale"):
-                        return locks_data
-        except Exception as e:
-            _LOGGER.error(f"Refresh state error: {e}", exc_info=True)
-        return {"yale": {}, "user_id": None, "structure_id": None}

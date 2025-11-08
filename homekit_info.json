@@ -1,0 +1,42 @@
+{
+  "20251013_202707_userinfotrait_structureinfotrait_boltlocktrait_boltlocksettingstrait_boltlockcapabilitiestrait_pincodeinputtrait_tampertrait": {
+    "serial_numbers": [
+      "00177A0000060303"
+    ],
+    "firmware_versions": [],
+    "battery_info": [
+      {
+        "condition": {
+          "1": "1760387227",
+          "2": "372000000"
+        },
+        "voltage": 1.0,
+        "source_file": "00001.blackbox.json"
+      }
+    ],
+    "timestamps": [
+      {
+        "path": "1.5.1",
+        "timestamp": 1760387227,
+        "datetime": "2025-10-13T16:27:07"
+      }
+    ],
+    "model_info": {
+      "manufacturer": "nest.iface.MobileStructureIface",
+      "model": "4"
+    },
+    "devices": [
+      {
+        "id": "DEVICE_00177A0000060303",
+        "type": "yale.resource.LinusLockResource",
+        "traits": [
+          "weave.trait.security.BoltLockCapabilitiesTrait",
+          "weave.trait.security.PincodeInputTrait",
+          "weave.trait.security.BoltLockSettingsTrait",
+          "weave.trait.security.TamperTrait",
+          "weave.trait.security.BoltLockTrait"
+        ]
+      }
+    ]
+  }
+}

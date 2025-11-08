@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+import "proto/nest/iface.proto";
+
+package nest.rpc;
+
+message ObjectIdPair {
+  string id = 1;
+  string key = 2;
+  string uuid = 3;
+}
+
+message DynamicProp_Indirect {
+  google.protobuf.Any property = 1;
+}
+
+message TraitGetProperty {
+  ObjectIdPair object = 1;
+  bytes operation = 2;
+  DynamicProp_Indirect data = 3;
+  uint64 monotonic_version = 4;
+}
+
+message PropertyKeyTraitPair {
+  string property_key = 1;
+  string trait_type = 2;
+}
+
+message TraitSetProperty {
+  ObjectIdPair object = 1;
+  bytes operation = 2;
+  google.protobuf.Any property = 3;
+  uint64 monotonic_version = 4;
+  repeated nest.iface.Interface interface = 7;
+}
+
+message CatalogMetadata {
+  uint64 catalog_version = 1;
+  uint64 snapshot_time_usec = 2;
+}
+
+message NestMessage {
+  repeated TraitSetProperty set = 1;
+  repeated TraitGetProperty get = 3;
+  CatalogMetadata catalog_metadata = 5;
+}
+
+message Status {
+  // The status code, which should be an enum value of [google.rpc.Code][].
+  int32 code = 1;
+
+  // A developer-facing error message, which should be in English. Any
+  // user-facing error message should be localized and sent in the
+  // [google.rpc.Status.details][] field, or localized by the client.
+  string message = 2;
+
+  // A list of messages that carry the error details.  There will be a
+  // common set of message types for APIs to use.
+  repeated google.protobuf.Any details = 3;
+}
+
+message StreamBody {
+  repeated NestMessage message = 1;
+  Status status = 2;
+  repeated bytes noop = 15;
+}
