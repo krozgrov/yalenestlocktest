@@ -54,3 +54,7 @@ htmlcov/
 
 # Internal documentation (not for public repo)
 docs/
+
+# macOS duplicate files (created when files are copied/moved)
+* 2.*
+* 2
