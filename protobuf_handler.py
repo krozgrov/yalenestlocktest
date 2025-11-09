@@ -109,13 +109,32 @@ class NestProtobufHandler:
                                 trait = description_pb2.DeviceIdentityTrait()
                                 property_any.Unpack(trait)
                                 trait_info["decoded"] = True
+                                
+                                # Extract model with detailed logging
+                                model_value = None
+                                if trait.HasField("model_name"):
+                                    model_value = trait.model_name.value
+                                    if model_value:
+                                        _LOGGER.info(f"✅ Model found in DeviceIdentityTrait: '{model_value}'")
+                                    else:
+                                        _LOGGER.warning(f"⚠️  model_name field exists but value is empty")
+                                else:
+                                    _LOGGER.warning(f"⚠️  model_name field not present in DeviceIdentityTrait")
+                                
+                                # Extract manufacturer with detailed logging
+                                manufacturer_value = None
+                                if trait.HasField("manufacturer"):
+                                    manufacturer_value = trait.manufacturer.value
+                                    if manufacturer_value:
+                                        _LOGGER.debug(f"Manufacturer found: '{manufacturer_value}'")
+                                
                                 trait_info["data"] = {
                                     "serial_number": trait.serial_number if trait.serial_number else None,
                                     "firmware_version": trait.fw_version if trait.fw_version else None,
-                                    "manufacturer": trait.manufacturer.value if trait.HasField("manufacturer") else None,
-                                    "model": trait.model_name.value if trait.HasField("model_name") else None,
+                                    "manufacturer": manufacturer_value,
+                                    "model": model_value,
                                 }
-                                _LOGGER.info(f"✅ Decoded DeviceIdentityTrait for {obj_id}: serial={trait_info['data'].get('serial_number')}, fw={trait_info['data'].get('firmware_version')}")
+                                _LOGGER.info(f"✅ Decoded DeviceIdentityTrait for {obj_id}: serial={trait_info['data'].get('serial_number')}, fw={trait_info['data'].get('firmware_version')}, model={trait_info['data'].get('model')}, manufacturer={trait_info['data'].get('manufacturer')}")
                             
                             # BatteryPowerSourceTrait
                             elif "BatteryPowerSourceTrait" in type_url and PROTO_AVAILABLE:
@@ -130,13 +149,127 @@ class NestProtobufHandler:
                                     "replacement_indicator": trait.replacementIndicator,
                                 }
                                 _LOGGER.info(f"✅ Decoded BatteryPowerSourceTrait for {obj_id}: level={trait_info['data'].get('battery_level')}, voltage={trait_info['data'].get('voltage')}")
+                            
+                            # BoltLockTrait (main trait - extract ALL fields)
+                            elif "BoltLockTrait" in type_url and "BoltLockSettings" not in type_url and "BoltLockCapabilities" not in type_url and PROTO_AVAILABLE:
+                                trait = weave_security_pb2.BoltLockTrait()
+                                property_any.Unpack(trait)
+                                trait_info["decoded"] = True
+                                
+                                # Extract boltLockActor details
+                                actor_data = None
+                                if trait.HasField("boltLockActor"):
+                                    actor = trait.boltLockActor
+                                    actor_data = {
+                                        "method": actor.method,
+                                        "originator": actor.originator.resourceId if actor.HasField("originator") and actor.originator.resourceId else None,
+                                        "agent": actor.agent.resourceId if actor.HasField("agent") and actor.agent.resourceId else None,
+                                    }
+                                
+                                # Extract timestamp
+                                locked_state_changed_at = None
+                                if trait.HasField("lockedStateLastChangedAt"):
+                                    ts = trait.lockedStateLastChangedAt
+                                    # Convert to seconds since epoch
+                                    locked_state_changed_at = ts.seconds + (ts.nanos / 1e9) if ts.seconds else None
+                                
+                                trait_info["data"] = {
+                                    "state": trait.state,
+                                    "actuator_state": trait.actuatorState,
+                                    "locked_state": trait.lockedState,
+                                    "bolt_lock_actor": actor_data,
+                                    "locked_state_last_changed_at": locked_state_changed_at,
+                                }
+                                _LOGGER.info(f"✅ Decoded BoltLockTrait for {obj_id}: state={trait.state}, locked_state={trait.lockedState}, actuator_state={trait.actuatorState}")
+                            
+                            # BoltLockSettingsTrait
+                            elif "BoltLockSettingsTrait" in type_url and PROTO_AVAILABLE:
+                                trait = weave_security_pb2.BoltLockSettingsTrait()
+                                property_any.Unpack(trait)
+                                trait_info["decoded"] = True
+                                
+                                # Extract autoRelockDuration
+                                auto_relock_duration_seconds = None
+                                if trait.HasField("autoRelockDuration"):
+                                    duration = trait.autoRelockDuration
+                                    auto_relock_duration_seconds = duration.seconds + (duration.nanos / 1e9) if duration.seconds else None
+                                
+                                # For bool fields in proto3, check if field was set (HasField) or use default
+                                # autoRelockOn defaults to False in proto3 if not set
+                                auto_relock_on = None
+                                if trait.HasField("autoRelockOn"):
+                                    auto_relock_on = trait.autoRelockOn
+                                
+                                trait_info["data"] = {
+                                    "auto_relock_on": auto_relock_on,
+                                    "auto_relock_duration_seconds": auto_relock_duration_seconds,
+                                }
+                                
+                                # Only log if we have at least one field
+                                if auto_relock_on is not None or auto_relock_duration_seconds is not None:
+                                    _LOGGER.info(f"✅ Decoded BoltLockSettingsTrait for {obj_id}: auto_relock_on={auto_relock_on}, duration={auto_relock_duration_seconds}")
+                                else:
+                                    _LOGGER.debug(f"✅ Decoded BoltLockSettingsTrait for {obj_id} but no fields present in message")
+                            
+                            # BoltLockCapabilitiesTrait
+                            elif "BoltLockCapabilitiesTrait" in type_url and PROTO_AVAILABLE:
+                                trait = weave_security_pb2.BoltLockCapabilitiesTrait()
+                                property_any.Unpack(trait)
+                                trait_info["decoded"] = True
+                                
+                                # Extract maxAutoRelockDuration
+                                max_auto_relock_duration_seconds = None
+                                if trait.HasField("maxAutoRelockDuration"):
+                                    duration = trait.maxAutoRelockDuration
+                                    max_auto_relock_duration_seconds = duration.seconds + (duration.nanos / 1e9) if duration.seconds else None
+                                
+                                trait_info["data"] = {
+                                    "handedness": trait.handedness,
+                                    "max_auto_relock_duration_seconds": max_auto_relock_duration_seconds,
+                                }
+                                _LOGGER.info(f"✅ Decoded BoltLockCapabilitiesTrait for {obj_id}: handedness={trait.handedness}, max_duration={max_auto_relock_duration_seconds}")
+                            
+                            # PincodeInputTrait
+                            elif "PincodeInputTrait" in type_url and PROTO_AVAILABLE:
+                                trait = weave_security_pb2.PincodeInputTrait()
+                                property_any.Unpack(trait)
+                                trait_info["decoded"] = True
+                                trait_info["data"] = {
+                                    "pincode_input_state": trait.pincodeInputState,
+                                }
+                                _LOGGER.debug(f"✅ Decoded PincodeInputTrait for {obj_id}: state={trait.pincodeInputState}")
+                            
+                            # TamperTrait
+                            elif "TamperTrait" in type_url and PROTO_AVAILABLE:
+                                trait = weave_security_pb2.TamperTrait()
+                                property_any.Unpack(trait)
+                                trait_info["decoded"] = True
+                                
+                                # Extract timestamps
+                                first_observed_at = None
+                                first_observed_at_ms = None
+                                if trait.HasField("firstObservedAt"):
+                                    ts = trait.firstObservedAt
+                                    first_observed_at = ts.seconds + (ts.nanos / 1e9) if ts.seconds else None
+                                if trait.HasField("firstObservedAtMs"):
+                                    ts = trait.firstObservedAtMs
+                                    first_observed_at_ms = ts.seconds + (ts.nanos / 1e9) if ts.seconds else None
+                                
+                                trait_info["data"] = {
+                                    "tamper_state": trait.tamperState,
+                                    "first_observed_at": first_observed_at,
+                                    "first_observed_at_ms": first_observed_at_ms,
+                                }
+                                _LOGGER.debug(f"✅ Decoded TamperTrait for {obj_id}: tamper_state={trait.tamperState}")
                         except Exception as e:
                             trait_info["error"] = str(e)
                             _LOGGER.debug(f"Error decoding trait {type_url}: {e}")
                         
                         all_traits[trait_key] = trait_info
 
-                    if "BoltLockTrait" in type_url and obj_id:
+                    # Existing lock-specific processing (keep for backward compatibility)
+                    # Note: Full trait data is already stored in all_traits above
+                    if "BoltLockTrait" in (type_url or "") and "BoltLockSettings" not in type_url and "BoltLockCapabilities" not in type_url and obj_id:
                         bolt_lock = weave_security_pb2.BoltLockTrait()
                         try:
                             if not property_any:
@@ -147,15 +280,35 @@ class NestProtobufHandler:
                                 _LOGGER.warning(f"Unpacking failed for {obj_id}, skipping")
                                 continue
 
+                            # Extract basic lock state for backward compatibility
                             locks_data["yale"][obj_id] = {
                                 "device_id": obj_id,
                                 "bolt_locked": bolt_lock.lockedState == weave_security_pb2.BoltLockTrait.BOLT_LOCKED_STATE_LOCKED,
                                 "bolt_moving": bolt_lock.actuatorState not in [weave_security_pb2.BoltLockTrait.BOLT_ACTUATOR_STATE_OK],
-                                "actuator_state": bolt_lock.actuatorState
+                                "actuator_state": bolt_lock.actuatorState,
+                                # Add additional fields
+                                "state": bolt_lock.state,
+                                "locked_state": bolt_lock.lockedState,
                             }
-                            if bolt_lock.boltLockActor.originator.resourceId:
-                                locks_data["user_id"] = bolt_lock.boltLockActor.originator.resourceId
-                            _LOGGER.debug(f"Parsed BoltLockTrait for {obj_id}: {locks_data['yale'][obj_id]}, user_id={locks_data['user_id']}")
+                            
+                            # Extract actor info
+                            if bolt_lock.HasField("boltLockActor"):
+                                actor = bolt_lock.boltLockActor
+                                locks_data["yale"][obj_id]["actor_method"] = actor.method
+                                if actor.HasField("originator") and actor.originator.resourceId:
+                                    locks_data["yale"][obj_id]["actor_originator"] = actor.originator.resourceId
+                                    locks_data["user_id"] = actor.originator.resourceId
+                                if actor.HasField("agent") and actor.agent.resourceId:
+                                    locks_data["yale"][obj_id]["actor_agent"] = actor.agent.resourceId
+                            
+                            # Extract timestamp
+                            if bolt_lock.HasField("lockedStateLastChangedAt"):
+                                ts = bolt_lock.lockedStateLastChangedAt
+                                locked_state_changed_at = ts.seconds + (ts.nanos / 1e9) if ts.seconds else None
+                                if locked_state_changed_at:
+                                    locks_data["yale"][obj_id]["locked_state_last_changed_at"] = locked_state_changed_at
+                            
+                            _LOGGER.debug(f"Parsed BoltLockTrait for {obj_id}: {locks_data['yale'][obj_id]}, user_id={locks_data.get('user_id')}")
 
                         except DecodeError as e:
                             _LOGGER.error(f"Failed to decode BoltLockTrait for {obj_id}: {e}")

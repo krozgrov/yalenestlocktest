@@ -118,10 +118,26 @@ async def main():
                         if trait_info.get("decoded"):
                             type_url = trait_info.get("type_url", "")
                             data = trait_info.get("data", {})
-                            print(f"    ✅ {type_url.split('.')[-1]}")
-                            for key, value in data.items():
-                                if value is not None:
-                                    print(f"       {key}: {value}")
+                            trait_name = type_url.split('.')[-1]
+                            print(f"    ✅ {trait_name}")
+                            
+                            # Special handling for DeviceIdentityTrait to highlight model
+                            if "DeviceIdentityTrait" in type_url:
+                                if data.get("model"):
+                                    print(f"       ⭐ MODEL: {data['model']}")
+                                else:
+                                    print(f"       ⚠️  MODEL: NOT FOUND")
+                                if data.get("manufacturer"):
+                                    print(f"       Manufacturer: {data['manufacturer']}")
+                                if data.get("serial_number"):
+                                    print(f"       Serial: {data['serial_number']}")
+                                if data.get("firmware_version"):
+                                    print(f"       Firmware: {data['firmware_version']}")
+                            else:
+                                # Regular display for other traits
+                                for key, value in data.items():
+                                    if value is not None:
+                                        print(f"       {key}: {value}")
                             
                             type_name = type_url.split('.')[-1]
                             if type_name not in decoded_traits:
