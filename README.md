@@ -1,35 +1,203 @@
-An effort in prototyping and troublshooting the usage of the Google Nest grcp-web endpoint
+A general-purpose protobuf decoder and Nest Yale Lock integration toolkit.
 
-# Setup
+This project provides tools to decode protobuf messages from **any service**, with Nest as a built-in example. The decoder is service-agnostic and can work with custom proto definitions.
 
-## Dependencies
+# Quick Start
 
-There are 2 separate requirements.txt files. This is because the `blackboxprotobuf` package depends on an older version of `protobuf`, but since using a newer version of `protobuf` doesn't break the `blackboxprotobuf` package (and the older version breaks the rest of the scripts here) you should install `blackboxprotobuf` without dependencies.
+## Installation
 
-`pip install -r requirements.txt`
-`pip install -r requirements-no-deps.txt --no-deps`
+```bash
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-no-deps.txt --no-deps
 
-If you accidentally install `blackboxprotobuf` with dependencies and the runtime gets downgraded (you will see `ImportError: cannot import name 'runtime_version'`), simply reinstall the required `protobuf` wheel explicitly: `pip install --upgrade protobuf==6.32.1`.
+# Optional: For enhanced output formatting
+pip install rich
 
-## Environment File
+# Optional: For web GUI
+pip install flask
+```
 
-There is a template for `.env` file called `.env_template`. Simply rename or copy the `.env_template` as `.env` and fill out the 2 variables. For information on how to get the values for the ENV file, read the instructions found [here](https://github.com/chrisjshull/homebridge-nest/tree/master?tab=readme-ov-file#using-a-google-account)
+**Note:** There are 2 separate requirements.txt files because `blackboxprotobuf` depends on an older version of `protobuf`, but using a newer version doesn't break it. If you see `ImportError: cannot import name 'runtime_version'`, reinstall: `pip install --upgrade protobuf==6.32.1`.
 
+## Environment File (for Nest integration)
+
+Copy `.env_template` to `.env` and fill in your Nest credentials. See [instructions here](https://github.com/chrisjshull/homebridge-nest/tree/master?tab=readme-ov-file#using-a-google-account).
 
 # Usage
 
-Run `python main.py --action status` to authenticate, stream the Observe feed, and print the parsed lock state without sending commands.
+## General-Purpose Protobuf Decoder
 
-- `--action lock` / `--action unlock` will send the corresponding command after the snapshot; add `--dry-run` to preview the payload without dispatching it.
-- `--device-id <DEVICE_…>` targets a specific lock when you have multiple Yale devices registered.
-- The script always closes the Nest session after the requested action completes, so repeated runs are safe.
+Decode protobuf messages from **any service**:
 
-# Known Issues
+```bash
+# Decode a binary file (auto-detect format)
+python proto_decode.py decode file.bin
 
-`DecodeError in StreamBody: Error parsing message with type 'nest.rpc.StreamBody'`
-This error seems to be due to the incomplete `.proto` and `pb2.py` files. I believe this is probably due to the fact that these files were made from reverse engineering the Version 1 of the Nest APIs, but the "Observe" Endpoint we are making requests to is Version 2 of the APIs.
+# Decode from URL (fetch from any service endpoint)
+python proto_decode.py decode --url https://api.example.com/protobuf/data
 
-Because of this, there is a `reverse_engineering.py` that allows you to make an "Observe" request, and then utilize the `blackboxprotobuf` package to return a psuedo-proto message structure of the encoded data returned from the API. The idea is that we can take these outputs and further refine the `.proto` files, and generate new. `pb2.py` bindings for the Nest API Version 2. 
+# Decode from URL with authentication
+python proto_decode.py decode --url https://api.example.com/data \
+  --headers '{"Authorization": "Bearer your_token"}'
+
+# POST request with protobuf payload
+python proto_decode.py decode --url https://api.example.com/observe \
+  --method POST \
+  --post-data request.bin \
+  --headers '{"Content-Type": "application/x-protobuf"}'
+
+# Decode with specific message type
+python proto_decode.py decode file.bin --message-type nest.rpc.StreamBody
+
+# Decode hex string
+python proto_decode.py decode --hex "0a0b48656c6c6f20576f726c64"
+
+# Decode base64
+python proto_decode.py decode --base64 "CgtIZWxsbyBXb3JsZA=="
+
+# Use blackboxprotobuf (no proto definition needed!)
+python proto_decode.py decode file.bin --blackbox
+
+# Load custom proto files
+python proto_decode.py decode file.bin --proto-path ./my_proto_files
+```
+
+## Nest-Specific Tools
+
+### Lock Control
+
+```bash
+# Check lock status
+python nest_tool.py lock --action status
+
+# Lock/unlock device
+python nest_tool.py lock --action lock
+python nest_tool.py lock --action unlock --device-id DEVICE_00177A0000060303
+```
+
+### Trait Decoding
+
+```bash
+# Decode all traits (pretty format)
+python nest_tool.py decode --format pretty
+
+# Decode as JSON
+python nest_tool.py decode --format json
+```
+
+## GUI Interface
+
+```bash
+# Desktop GUI (Tkinter - built-in)
+python gui.py --mode desktop
+
+# Web GUI (requires Flask)
+python gui.py --mode web --port 5000
+```
+
+## Testing Tools
+
+```bash
+# Test a capture file
+python test_tool.py file captures/latest/00001.raw.bin
+
+# Test all files in a directory
+python test_tool.py directory captures/latest
+
+# Test live stream
+python test_tool.py stream --limit 3
+```
+
+# Project Structure
+
+## Core Tools (10 files)
+
+**Main Tools:**
+- **`proto_decode.py`** - General-purpose protobuf decoder (works with any service!)
+  - Supports files, URLs, hex, base64
+  - Works with or without proto definitions
+  - Service-agnostic architecture
+- **`nest_tool.py`** - Nest-specific lock control and trait decoding
+- **`gui.py`** - GUI interface (web + desktop)
+- **`test_tool.py`** - Unified testing tool
+- **`reverse_engineering.py`** - Capture and reverse engineer proto structures
+
+**Supporting Modules:**
+- `protobuf_handler.py` - Core protobuf handler
+- `protobuf_handler_enhanced.py` - Enhanced handler with full trait decoding
+- `auth.py` - Authentication utilities
+- `const.py` - Constants
+- `proto_utils.py` - Proto utilities
+
+## Legacy Scripts (2 files)
+
+- `main.py` - Original lock control (use `nest_tool.py lock` instead)
+- `decode_traits.py` - Original decoder (use `nest_tool.py decode` or `proto_decode.py` instead)
+
+## Utility Scripts (3 files)
+
+- `archive_old_scripts.py` - Archive redundant test/capture scripts
+- `archive_dev_tools.py` - Archive development tools
+- `test_nest_url_live.py` - Live URL testing script
+
+## Archived Files
+
+Development tools and redundant scripts have been archived to `archive/`:
+- `archive/dev_tools/` - Development and proto refinement tools
+- `archive/test_scripts/` - Redundant test scripts
+- `archive/capture_scripts/` - Redundant capture scripts
+- `archive/decode_scripts/` - Redundant decode/extract scripts
+- `archive/analysis_scripts/` - Analysis scripts
+
+All archived files are preserved in git history.
+
+# Advanced Usage
+
+## Decoding from URLs
+
+The decoder can fetch protobuf data directly from any service endpoint:
+
+```bash
+# Simple GET request
+python proto_decode.py decode --url https://api.example.com/protobuf/data
+
+# With authentication
+python proto_decode.py decode --url https://api.example.com/data \
+  --headers '{"Authorization": "Bearer token", "X-API-Key": "key"}'
+
+# POST request with protobuf payload
+python proto_decode.py decode --url https://api.example.com/observe \
+  --method POST \
+  --post-data request.bin \
+  --headers '{"Content-Type": "application/x-protobuf"}'
+
+# Stream large responses
+python proto_decode.py decode --url https://api.example.com/stream \
+  --stream --timeout 60
+```
+
+## Using Custom Proto Files
+
+The general decoder can work with any proto definitions:
+
+```bash
+# Load proto files from a directory
+python proto_decode.py decode file.bin --proto-path ./my_proto_files
+
+# Use a Python module containing proto definitions
+python proto_decode.py decode file.bin --proto-module mypackage.proto
+```
+
+## Decoding Without Proto Definitions
+
+Use blackboxprotobuf to decode messages without proto files:
+
+```bash
+python proto_decode.py decode file.bin --blackbox
+```
+
+This will attempt to decode the message structure automatically and generate a type definition. 
 
 ## Automating Observe captures
 

@@ -51,3 +51,6 @@ htmlcov/
 .dmypy.json
 .pyre/
 .pytype/
+
+# Internal documentation (not for public repo)
+docs/
