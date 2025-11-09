@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+// weave.trait.security.PincodeInputTrait
+message PincodeInput {
+  message PincodeInputField1 {
+    bytes field_1 = 1;
+    bytes field_2 = 2;
+    message PincodeInputField4 {
+      bytes field_1 = 1;
+      bytes field_2 = 2;
+    }
+
+    PincodeInputField4 field_4 = 4;
+    message PincodeInputField7 {
+      bytes field_2 = 2;
+      message PincodeInputField4 {
+        int64 field_1 = 1;
+        int64 field_2 = 2;
+      }
+
+      PincodeInputField4 field_4 = 4;
+    }
+
+    PincodeInputField7 field_7 = 7;
+  }
+
+  PincodeInputField1 field_1 = 1;
+  message PincodeInputField3 {
+    message PincodeInputField1 {
+      bytes field_1 = 1;
+      bytes field_2 = 2;
+    }
+
+    PincodeInputField1 field_1 = 1;
+    bytes field_2 = 2;
+    message PincodeInputField3 {
+      message PincodeInputField1 {
+        bytes field_1 = 1;
+        message PincodeInputField2 {
+          bytes field_1 = 1;
+          int64 field_2 = 2;
+          int64 field_3 = 3;
+          int64 field_4 = 4;
+          int64 field_5 = 5;
+          int64 field_7 = 7;
+          int64 field_9 = 9;
+          bytes field_10 = 10;
+          message PincodeInputField12 {
+            bytes field_1 = 1;
+          }
+
+          PincodeInputField12 field_12 = 12;
+          message PincodeInputField13 {
+            bytes field_1 = 1;
+            int64 field_2 = 2;
+          }
+
+          PincodeInputField13 field_13 = 13;
+        }
+
+        PincodeInputField2 field_2 = 2;
+      }
+
+      PincodeInputField1 field_1 = 1;
+    }
+
+    PincodeInputField3 field_3 = 3;
+    int64 field_4 = 4;
+  }
+
+  PincodeInputField3 field_3 = 3;
+  message PincodeInputField5 {
+    int64 field_1 = 1;
+    int64 field_2 = 2;
+  }
+
+  PincodeInputField5 field_5 = 5;
+}
